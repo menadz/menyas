@@ -38,6 +38,18 @@ Ajoutez, supprimez ou réordonnez librement les objets dans le tableau
 `TIMELINE_EVENTS` — la frise se positionne automatiquement selon les dates
 réelles (l'écart entre deux points reflète l'écart de temps réel).
 
+**Plusieurs lieux pour une même date :** remplacez `location` par une liste :
+
+```js
+location: [
+  { name: "Ville 1, Algérie", lat: 36.7345, lng: 2.9453 },
+  { name: "Ville 2, Algérie", lat: 36.6998, lng: 3.0455 }
+]
+```
+
+La carte affiche alors un repère par lieu et se recadre automatiquement
+pour tous les montrer.
+
 Pour trouver des coordonnées GPS : clic droit sur un lieu dans
 [openstreetmap.org](https://www.openstreetmap.org) → les coordonnées
 s'affichent dans le menu contextuel.

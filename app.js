@@ -27,7 +27,7 @@
 
   let activeIndex = 0;
   let carouselIndex = 0;
-  let map, marker;
+  let map;
 
   /* ------------------------------------------------------------
      1. Références DOM
@@ -154,15 +154,35 @@
     iconAnchor: [8, 8],
   });
 
+  // Normalise ev.location en tableau, que data.js fournisse un objet
+  // unique ({name, lat, lng}) ou une liste de plusieurs lieux.
+  function locationsOf(ev) {
+    return Array.isArray(ev.location) ? ev.location : [ev.location];
+  }
+
+  let markers = [];
+
   function renderMap(ev) {
-    const { lat, lng, name } = ev.location;
-    map.setView([lat, lng], 11, { animate: true });
+    const locations = locationsOf(ev);
 
-    if (marker) marker.remove();
-    marker = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
-    marker.bindPopup(`<strong>${escapeHtml(name)}</strong>`);
+    // nettoie les marqueurs de l'événement précédent
+    markers.forEach(m => m.remove());
+    markers = [];
 
-    mapCaption.textContent = `${name} — ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    locations.forEach(loc => {
+      const m = L.marker([loc.lat, loc.lng], { icon: pinIcon }).addTo(map);
+      m.bindPopup(`<strong>${escapeHtml(loc.name)}</strong>`);
+      markers.push(m);
+    });
+
+    if (locations.length === 1) {
+      map.setView([locations[0].lat, locations[0].lng], 11, { animate: true });
+    } else {
+      const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng]));
+      map.fitBounds(bounds, { padding: [32, 32], animate: true });
+    }
+
+    mapCaption.textContent = locations.map(l => l.name).join("  ·  ");
 
     // Leaflet a besoin d'un resize si le conteneur était caché au chargement
     setTimeout(() => map.invalidateSize(), 200);
