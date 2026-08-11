@@ -96,11 +96,22 @@
     carouselIndex = 0;
 
     ev.images.forEach((src, i) => {
+      const slide = document.createElement("div");
+      slide.className = "carousel-slide";
+
+      const bg = document.createElement("div");
+      bg.className = "slide-bg";
+      bg.style.backgroundImage = `url("${src}")`;
+      slide.appendChild(bg);
+
       const img = document.createElement("img");
+      img.className = "slide-img";
       img.src = src;
       img.alt = ev.title + " — photo " + (i + 1);
       img.loading = "lazy";
-      carouselTrack.appendChild(img);
+      slide.appendChild(img);
+
+      carouselTrack.appendChild(slide);
 
       const dot = document.createElement("div");
       dot.className = "dot" + (i === 0 ? " active" : "");
