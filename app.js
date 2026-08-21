@@ -45,7 +45,6 @@
   const mapCaption = document.getElementById("mapCaption");
 
   const timelineTicks = document.getElementById("timelineTicks");
-  const timelineYears = document.getElementById("timelineYears");
   const timelineProgress = document.getElementById("timelineProgress");
   const timelineHandle = document.getElementById("timelineHandle");
   const timelineScale = document.querySelector(".timeline-scale");
@@ -77,13 +76,6 @@
       point.dataset.index = i;
       point.addEventListener("click", () => selectEvent(i));
       timelineTicks.appendChild(point);
-
-      const label = document.createElement("div");
-      label.className = "year-label";
-      label.style.left = pct + "%";
-      label.textContent = new Date(ev.date).getFullYear();
-      label.dataset.index = i;
-      timelineYears.appendChild(label);
     });
   }
 
@@ -115,11 +107,12 @@
 
       const dot = document.createElement("div");
       dot.className = "dot" + (i === 0 ? " active" : "");
-      dot.addEventListener("click", () => goToSlide(i));
+      dot.addEventListener("click", () => { goToSlide(i); restartAutoplay(); });
       carouselDots.appendChild(dot);
     });
 
     updateCarouselTransform();
+    startAutoplay();
   }
 
   function updateCarouselTransform() {
@@ -135,8 +128,38 @@
     updateCarouselTransform();
   }
 
-  carPrev.addEventListener("click", () => goToSlide(carouselIndex - 1));
-  carNext.addEventListener("click", () => goToSlide(carouselIndex + 1));
+  // Défilement automatique du carrousel toutes les 3 secondes.
+  // Une interaction manuelle (flèches, points) relance simplement le
+  // minuteur — elle ne l'arrête pas — pour laisser la main tout en
+  // continuant le défilement ensuite.
+  const AUTOPLAY_DELAY = 3000;
+  let autoplayTimer = null;
+
+  function stopAutoplay() {
+    if (autoplayTimer) clearInterval(autoplayTimer);
+    autoplayTimer = null;
+  }
+
+  function startAutoplay() {
+    stopAutoplay();
+    const count = carouselTrack.children.length;
+    if (count <= 1) return; // rien à faire défiler
+    autoplayTimer = setInterval(() => goToSlide(carouselIndex + 1), AUTOPLAY_DELAY);
+  }
+
+  function restartAutoplay() {
+    startAutoplay();
+  }
+
+  // Pause quand l'onglet n'est pas visible (évite de sauter plusieurs
+  // images d'un coup au retour sur l'onglet).
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopAutoplay();
+    else startAutoplay();
+  });
+
+  carPrev.addEventListener("click", () => { goToSlide(carouselIndex - 1); restartAutoplay(); });
+  carNext.addEventListener("click", () => { goToSlide(carouselIndex + 1); restartAutoplay(); });
 
   /* ------------------------------------------------------------
      4. Carte (Leaflet / OpenStreetMap)
@@ -228,9 +251,6 @@
     [...timelineTicks.querySelectorAll(".tick-point")].forEach((p, idx) =>
       p.classList.toggle("active", idx === activeIndex)
     );
-    [...timelineYears.querySelectorAll(".year-label")].forEach((l, idx) =>
-      l.classList.toggle("active", idx === activeIndex)
-    );
 
     navCount.textContent = `${activeIndex + 1} / ${events.length}`;
   }
@@ -293,9 +313,48 @@
   window.addEventListener("touchend", (e) => endDrag(e.changedTouches[0].clientX));
 
   /* ------------------------------------------------------------
-     7. Démarrage
+     8. Musique de fond (fichier audio local)
+  ------------------------------------------------------------ */
+  function initMusic() {
+    const musicBtn = document.getElementById("musicToggle");
+    const audio = document.getElementById("bgMusic");
+    if (!musicBtn || !audio) return;
+
+    const file = (typeof MUSIC_FILE !== "undefined" ? MUSIC_FILE : "").trim();
+    if (!file) {
+      musicBtn.style.display = "none";
+      return;
+    }
+    audio.src = file;
+
+    musicBtn.addEventListener("click", () => {
+      if (audio.paused) {
+        audio.play().catch(() => {
+          // Le fichier est introuvable, mal formé, ou le chemin est faux.
+          console.warn("Impossible de lancer l'audio — vérifiez MUSIC_FILE dans data.js et que le fichier existe bien.");
+        });
+      } else {
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener("play", () => {
+      musicBtn.classList.add("playing");
+      musicBtn.querySelector(".music-label").textContent = "En pause";
+      musicBtn.setAttribute("aria-label", "Couper la musique de fond");
+    });
+    audio.addEventListener("pause", () => {
+      musicBtn.classList.remove("playing");
+      musicBtn.querySelector(".music-label").textContent = "Musique";
+      musicBtn.setAttribute("aria-label", "Activer la musique de fond");
+    });
+  }
+
+  /* ------------------------------------------------------------
+     9. Démarrage
   ------------------------------------------------------------ */
   buildTicks();
   initMap();
+  initMusic();
   selectEvent(0);
 })();
